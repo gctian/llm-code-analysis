@@ -715,10 +715,11 @@ class BaichuanForCausalLM(BaichuanPreTrainedModel):
         # 线性映射 [bs, seqlen, dmodel] -> [bs, seqlen, vocab_size]
         logits = self.lm_head(hidden_states)
         loss = None
-        if labels is not None:
+        if labels is not None:  # label非空是训练模式，需要计算loss
             # Shift so that tokens < n predict n
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
+            # 这里计算 loss，每个token的 groud truth是右边挨着的 token，每个token计算一个交叉熵损失
+            shift_logits = logits[..., :-1, :].contiguous()  # logit序列截取 [1,... n-1]
+            shift_labels = labels[..., 1:].contiguous()  # label序列取 [2,... n]
             # Flatten the tokens
             loss_fct = CrossEntropyLoss()
             shift_logits = shift_logits.view(-1, self.config.vocab_size)
